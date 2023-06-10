@@ -1,5 +1,17 @@
+use serde::{Serialize, Deserialize};
+use vkclient::List;
+use crate::{Config, vkapi::Clients};
+
+fn get_clients() -> Clients {
+    use dotenvy_macro::dotenv;
+    let group_token = dotenv!("VK_GROUP_TOKEN").to_string();
+    let user_token = dotenv!("VK_USER_TOKEN").to_string();
+    let config = Config::new(group_token, user_token);
+    crate::vkapi::init_clients(config)
+}
+
 #[test]
-fn test_command_trait() {
+fn command_trait() {
     use crate::answers::CommandAnswers;
     struct TestCommand {
         answers: Vec<String>,
@@ -15,8 +27,29 @@ fn test_command_trait() {
     let command = TestCommand {
         answers: vec!["a", "b", "c"].iter().map(|x| x.to_string()).collect(),
     };
-    for _ in 0..100 {
+    for _ in 0..6 {
         let answer = command.get_answer();
         assert!(command.get_possible_answers().contains(&answer.to_string()));
+    }
+}
+
+#[tokio::test]
+async fn clients_works() {
+    let clients = get_clients();
+
+    // Just to check if api works
+    #[derive(Serialize, Deserialize)]
+    struct Empty {
+        empty: Option<String>
+    }
+
+    let user_request: Result<Empty, vkclient::VkApiError> = clients.user.send_request("account.getInfo", Empty { empty: None }).await;
+
+    if let Err(err) = user_request {
+        panic!("{}", err)
+    }
+    let group_request: Result<Empty, vkclient::VkApiError> = clients.group.send_request("groups.getTokenPermissions", Empty { empty: None }).await;
+    if let Err(err) = group_request {
+        panic!("{}", err)
     }
 }

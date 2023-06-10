@@ -32,3 +32,12 @@ pub(crate) struct CheckOk {
     pub(crate) answers: Vec<String>,
 }
 
+impl CommandAnswers for CheckOk {
+    fn get_possible_answers(&self) -> &Vec<String> {
+        &self.answers
+    }
+
+    fn get_mut_possible_answers(&mut self) -> &mut Vec<String> {
+        &mut self.answers
+    }
+}
