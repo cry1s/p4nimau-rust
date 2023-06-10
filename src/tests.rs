@@ -1,11 +1,11 @@
+use std::env;
 use serde::{Serialize, Deserialize};
-use vkclient::List;
 use crate::{Config, vkapi::Clients};
 
 fn get_clients() -> Clients {
     use dotenvy_macro::dotenv;
-    let group_token = dotenv!("VK_GROUP_TOKEN").to_string();
-    let user_token = dotenv!("VK_USER_TOKEN").to_string();
+    let group_token = env::var("VK_GROUP_TOKEN").unwrap_or(dotenv!("VK_GROUP_TOKEN").to_string());
+    let user_token = env::var("VK_USER_TOKEN").unwrap_or(dotenv!("VK_USER_TOKEN").to_string());
     let config = Config::new(group_token, user_token);
     crate::vkapi::init_clients(config)
 }
