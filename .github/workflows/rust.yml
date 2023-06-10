@@ -16,6 +16,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: 'Create env file'
+      run: |
+        touch .env
+        echo VK_GROUP_TOKEN="VK_GROUP_TOKEN" >> .env
+        echo VK_USER_TOKEN="VK_USER_TOKEN" >> .env
     - name: Build
       run: cargo build --verbose
     - name: Run tests
