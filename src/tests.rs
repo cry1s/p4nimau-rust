@@ -41,8 +41,8 @@ async fn clients_works() {
     struct Empty {}
 
     let user_request: Result<Empty, vkclient::VkApiError> = clients.user.send_request("account.getInfo", ()).await;
-    assert!(user_request.is_ok());
+    assert!(user_request.is_ok(), "User request failed!");
     
     let group_request: Result<Empty, vkclient::VkApiError> = clients.group.send_request("groups.getTokenPermissions", ()).await;
-    assert!(group_request.is_ok())
+    assert!(group_request.is_ok(), "Group request failed!")
 }
