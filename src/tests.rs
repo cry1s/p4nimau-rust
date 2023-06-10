@@ -37,19 +37,12 @@ fn command_trait() {
 async fn clients_works() {
     let clients = get_clients();
 
-    // Just to check if api works
-    #[derive(Serialize, Deserialize)]
-    struct Empty {
-        empty: Option<String>
-    }
+    #[derive(Deserialize)]
+    struct Empty {}
 
-    let user_request: Result<Empty, vkclient::VkApiError> = clients.user.send_request("account.getInfo", Empty { empty: None }).await;
-
-    if let Err(err) = user_request {
-        panic!("{}", err)
-    }
-    let group_request: Result<Empty, vkclient::VkApiError> = clients.group.send_request("groups.getTokenPermissions", Empty { empty: None }).await;
-    if let Err(err) = group_request {
-        panic!("{}", err)
-    }
+    let user_request: Result<Empty, vkclient::VkApiError> = clients.user.send_request("account.getInfo", ()).await;
+    assert!(user_request.is_ok());
+    
+    let group_request: Result<Empty, vkclient::VkApiError> = clients.group.send_request("groups.getTokenPermissions", ()).await;
+    assert!(group_request.is_ok())
 }
