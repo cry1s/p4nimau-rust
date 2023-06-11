@@ -1,6 +1,5 @@
 use std::error::Error;
 
-mod answers;
 mod vkapi;
 mod config;
 
