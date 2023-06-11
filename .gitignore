@@ -1,3 +1,4 @@
 /target
 .env
 misc.txt
+config.json

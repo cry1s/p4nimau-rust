@@ -2,12 +2,14 @@ use std::error::Error;
 
 mod answers;
 mod vkapi;
+mod config;
 
-pub use vkapi::Config;
+pub use crate::config::TokenConfig;
+use vkapi::init_clients;
 
-pub async fn run(config: Config) -> Result<(), Box<dyn Error>> {
-    println!("group_token: {}", config.group_token);
-    println!("my_token: {}", config.user_token);
+pub async fn run(config: TokenConfig) -> Result<(), Box<dyn Error>> {
+    let clients = init_clients(config);
+    
     Ok(())
 }
 

@@ -1,18 +1,18 @@
 use std::env;
 use serde::{Serialize, Deserialize};
-use crate::{Config, vkapi::Clients};
+use crate::{TokenConfig, vkapi::Clients, config::AppConfig};
 
 fn get_clients() -> Clients {
     use dotenvy_macro::dotenv;
     let group_token = env::var("VK_GROUP_TOKEN").unwrap_or(dotenv!("VK_GROUP_TOKEN").to_string());
     let user_token = env::var("VK_USER_TOKEN").unwrap_or(dotenv!("VK_USER_TOKEN").to_string());
-    let config = Config::new(group_token, user_token);
+    let config = TokenConfig::new(group_token, user_token);
     crate::vkapi::init_clients(config)
 }
 
 #[test]
 fn command_trait() {
-    use crate::answers::CommandAnswers;
+    use crate::config::CommandAnswers;
     struct TestCommand {
         answers: Vec<String>,
     }
@@ -45,4 +45,19 @@ async fn clients_works() {
     
     let group_request: Result<Empty, vkclient::VkApiError> = clients.group.send_request("groups.getTokenPermissions", ()).await;
     assert!(group_request.is_ok(), "Group request failed!")
+}
+
+#[test]
+fn chat_ids() {
+    let mut cfg = AppConfig::new();
+    let len = cfg.chat_ids.len();
+    cfg.chat_ids.push(0);
+    cfg.write();
+    cfg = AppConfig::new();
+    assert_eq!(len + 1, cfg.chat_ids.len());
+
+    cfg.chat_ids.swap_remove(len);
+    cfg.write();
+    cfg = AppConfig::new();
+    assert_eq!(len, cfg.chat_ids.len());
 }
