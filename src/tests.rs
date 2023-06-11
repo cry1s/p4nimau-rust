@@ -1,6 +1,6 @@
 use std::env;
-use serde::{Serialize, Deserialize};
-use crate::{TokenConfig, vkapi::Clients, config::AppConfig};
+use serde::{Deserialize};
+use crate::{TokenConfig, vkapi::{Clients, self}, config::AppConfig};
 
 fn get_clients() -> Clients {
     use dotenvy_macro::dotenv;
@@ -15,6 +15,7 @@ fn command_trait() {
     use crate::config::CommandAnswers;
     struct TestCommand {
         answers: Vec<String>,
+        chance_of_answer: f32,
     }
     impl CommandAnswers for TestCommand {
         fn get_possible_answers(&self) -> &Vec<String> {
@@ -23,12 +24,21 @@ fn command_trait() {
         fn get_mut_possible_answers(&mut self) -> &mut Vec<String> {
             &mut self.answers
         }
+
+        fn get_chance_of_answer(&self) -> f32 {
+            self.chance_of_answer
+        }
+    
+        fn get_mut_chance_of_answer(&mut self) -> &mut f32 {
+            &mut self.chance_of_answer
+        }
     }
     let command = TestCommand {
         answers: vec!["a", "b", "c"].iter().map(|x| x.to_string()).collect(),
+        chance_of_answer: 1.0,
     };
     for _ in 0..6 {
-        let answer = command.get_answer();
+        let answer = command.get_answer().unwrap();
         assert!(command.get_possible_answers().contains(&answer.to_string()));
     }
 }
@@ -48,16 +58,21 @@ async fn clients_works() {
 }
 
 #[test]
-fn chat_ids() {
+fn config_read_write() {
     let mut cfg = AppConfig::new();
-    let len = cfg.chat_ids.len();
-    cfg.chat_ids.push(0);
+    let len = cfg.main_chat_ids.len();
+    cfg.main_chat_ids.push(0);
     cfg.write();
     cfg = AppConfig::new();
-    assert_eq!(len + 1, cfg.chat_ids.len());
+    assert_eq!(len + 1, cfg.main_chat_ids.len(), "Add element failed!");
 
-    cfg.chat_ids.swap_remove(len);
+    cfg.main_chat_ids.swap_remove(len);
     cfg.write();
     cfg = AppConfig::new();
-    assert_eq!(len, cfg.chat_ids.len());
+    assert_eq!(len, cfg.main_chat_ids.len(), "Delete element failed!");
+}
+
+#[tokio::test]
+async fn get_my_group_id() {
+    vkapi::get_my_group_id(&get_clients().group).await;
 }
