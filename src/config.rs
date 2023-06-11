@@ -46,7 +46,7 @@ impl AppConfig {
     }
 
     pub async fn load_group_id(&mut self, group_client: &VkApi) {
-        self.group_id = Some(vkapi::get_my_group_id(group_client).await);
+        self.group_id = Some(vkapi::get_my_group_id(group_client).await.unwrap());
         self.write();
     }
 }
@@ -57,7 +57,7 @@ pub trait CommandAnswers {
     fn get_chance_of_answer(&self) -> f32;
     fn get_mut_chance_of_answer(&mut self) -> &mut f32;
     fn get_answer(&self) -> Option<&str> {
-        if self.get_possible_answers().len() == 0
+        if self.get_possible_answers().is_empty()
             || rand::random::<f32>() > self.get_chance_of_answer()
         {
             return None;

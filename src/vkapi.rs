@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use vkclient::VkApi;
+use vkclient::{VkApi, VkApiError};
 use crate::config::{TokenConfig, AppConfig};
 
 pub struct Clients {
@@ -14,30 +14,28 @@ pub fn init_clients(config: TokenConfig) -> Clients {
     }
 }
 
-pub fn get_chats(group_client: &VkApi) {
-
-}
-
 #[derive(Deserialize)]
 pub struct LongPollServer {
-    
+    pub key: String,
+    pub server: String,
+    pub ts: String,
 }
 
-pub async fn get_long_poll_server(group_client: &VkApi, cfg: &AppConfig) -> LongPollServer {
+pub async fn get_long_poll_server(group_client: &VkApi, cfg: &AppConfig) -> Result<LongPollServer, VkApiError> {
     #[derive(Serialize)]
     struct Request {
-        
+        group_id: i32,
     }
     group_client.send_request("groups.getLongPollServer", Request {
-
-    }).await.unwrap()
+        group_id: cfg.group_id.expect("Group id is not loaded")
+    }).await
 }
 
-pub async fn get_my_group_id(group_client: &VkApi) -> i32 {
+pub async fn get_my_group_id(group_client: &VkApi) -> Result<i32, VkApiError> {
     #[derive(Deserialize)]
     struct GroupID {
         id: i32,
     }
-    let request: Vec<GroupID> = group_client.send_request("groups.getById", ()).await.unwrap();
-    request[0].id
+    let request: Vec<GroupID> = group_client.send_request("groups.getById", ()).await?;
+    Ok(request[0].id)
 }

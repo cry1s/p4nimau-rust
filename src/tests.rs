@@ -74,5 +74,5 @@ fn config_read_write() {
 
 #[tokio::test]
 async fn get_my_group_id() {
-    vkapi::get_my_group_id(&get_clients().group).await;
+    vkapi::get_my_group_id(&get_clients().group).await.unwrap();
 }
