@@ -1,18 +1,8 @@
 use crate::{
     config::AppConfig,
-    vkapi::{self, Clients},
-    TokenConfig,
+    vkapi::{self, get_clients},
 };
 use serde::Deserialize;
-use std::env;
-
-fn get_clients() -> Clients {
-    use dotenvy_macro::dotenv;
-    let group_token = env::var("VK_GROUP_TOKEN").unwrap_or(dotenv!("VK_GROUP_TOKEN").to_string());
-    let user_token = env::var("VK_USER_TOKEN").unwrap_or(dotenv!("VK_USER_TOKEN").to_string());
-    let config = TokenConfig::new(group_token, user_token);
-    crate::vkapi::init_clients(config)
-}
 
 #[test]
 fn command_trait() {
@@ -82,13 +72,12 @@ fn config_read_write() {
 
 #[tokio::test]
 async fn get_ids() {
-    let clients = get_clients();
     assert!(
-        vkapi::get_my_group_id(&clients.group).await.is_ok(),
+        vkapi::get_my_group_id().await.is_ok(),
         "Unable to get group ID"
     );
     assert!(
-        vkapi::get_owner_id(&clients.user).await.is_ok(),
+        vkapi::get_owner_id().await.is_ok(),
         "Unable to get user ID"
     );
 }

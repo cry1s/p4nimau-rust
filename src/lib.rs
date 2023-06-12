@@ -8,15 +8,15 @@ use crate::bot::Event;
 pub use crate::config::TokenConfig;
 use futures_util::{pin_mut, StreamExt};
 use tokio::sync::Mutex;
-use vkapi::init_clients;
+use vkapi::get_clients;
 use vkclient::longpoll::LongPollRequest;
 
-pub async fn run(config: TokenConfig) -> Result<(), Box<dyn Error>> {
-    let clients = init_clients(config);
+pub async fn run() -> Result<(), Box<dyn Error>> {
+    let clients = get_clients();
     let mut cfg = config::AppConfig::new();
-    cfg.load_ids(&clients).await;
+    cfg.load_ids().await;
 
-    let longpoll_input = vkapi::get_long_poll_server(&clients.group, &cfg).await?;
+    let longpoll_input = vkapi::get_long_poll_server(&cfg).await?;
     let longpoll = clients.group.longpoll();
 
     let stream = longpoll.subscribe::<(), Event>(LongPollRequest {

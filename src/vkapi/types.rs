@@ -1,20 +1,30 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct VkMessage {
-    pub message: VkMessageData
-    // clinet_info field i dont care for now
+    pub message: VkMessageData, // clinet_info field i dont care for now
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct VkMessageData {
     pub id: i32,
+    pub conversation_message_id: i32,
     pub date: i32,
     pub peer_id: i32,
     pub from_id: i32,
     pub text: String,
     pub random_id: i32,
     pub attachments: Vec<VkMessagesAttachment>,
+}
+
+impl VkMessageData {
+    pub fn reply(&self, msg: &str) {
+        crate::vkapi::send_reply(
+            self.peer_id,
+            self.conversation_message_id,
+            msg.to_string(),
+        );
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -41,7 +51,7 @@ pub enum VkMessagesAttachment {
     #[serde(rename = "wall_reply")]
     WallReply,
     Sticker,
-    Gift
+    Gift,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -84,7 +94,7 @@ pub enum VkWallAttachment {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VkPhoto {
     pub id: i32,
-    pub sizes: Vec<VkPhotoSizes>
+    pub sizes: Vec<VkPhotoSizes>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -112,5 +122,5 @@ pub struct VkVideo {
 pub struct VkWall {
     pub id: i32,
     pub text: String,
-    pub attachments: Vec<VkWallAttachment>
+    pub attachments: Vec<VkWallAttachment>,
 }

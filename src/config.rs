@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::vkapi::{self, Clients};
+use crate::vkapi::{self};
 
 pub struct TokenConfig {
     pub group_token: String,
@@ -44,12 +44,12 @@ impl AppConfig {
         serde_json::to_writer_pretty(BufWriter::new(file), self).unwrap();
     }
 
-    pub async fn load_ids(&mut self, clients: &Clients) {
+    pub async fn load_ids(&mut self) {
         if let None = self.group_id {
-            self.group_id = Some(vkapi::get_my_group_id(&clients.group).await.unwrap());
+            self.group_id = Some(vkapi::get_my_group_id().await.unwrap());
         }
         if self.admin_chat_ids.is_empty() {
-            let owner = vkapi::get_owner_id(&clients.user).await.unwrap();
+            let owner = vkapi::get_owner_id().await.unwrap();
             self.admin_chat_ids.push(owner);
         }
         self.write();
