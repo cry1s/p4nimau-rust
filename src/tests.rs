@@ -1,6 +1,10 @@
+use crate::{
+    config::AppConfig,
+    vkapi::{self, Clients},
+    TokenConfig,
+};
+use serde::Deserialize;
 use std::env;
-use serde::{Deserialize};
-use crate::{TokenConfig, vkapi::{Clients, self}, config::AppConfig};
 
 fn get_clients() -> Clients {
     use dotenvy_macro::dotenv;
@@ -28,7 +32,7 @@ fn command_trait() {
         fn get_chance_of_answer(&self) -> f32 {
             self.chance_of_answer
         }
-    
+
         fn get_mut_chance_of_answer(&mut self) -> &mut f32 {
             &mut self.chance_of_answer
         }
@@ -50,10 +54,14 @@ async fn clients_works() {
     #[derive(Deserialize)]
     struct Empty {}
 
-    let user_request: Result<Empty, vkclient::VkApiError> = clients.user.send_request("account.getInfo", ()).await;
+    let user_request: Result<Empty, vkclient::VkApiError> =
+        clients.user.send_request("account.getInfo", ()).await;
     assert!(user_request.is_ok(), "User request failed!");
-    
-    let group_request: Result<Empty, vkclient::VkApiError> = clients.group.send_request("groups.getTokenPermissions", ()).await;
+
+    let group_request: Result<Empty, vkclient::VkApiError> = clients
+        .group
+        .send_request("groups.getTokenPermissions", ())
+        .await;
     assert!(group_request.is_ok(), "Group request failed!")
 }
 
@@ -73,6 +81,14 @@ fn config_read_write() {
 }
 
 #[tokio::test]
-async fn get_my_group_id() {
-    vkapi::get_my_group_id(&get_clients().group).await.unwrap();
+async fn get_ids() {
+    let clients = get_clients();
+    assert!(
+        vkapi::get_my_group_id(&clients.group).await.is_ok(),
+        "Unable to get group ID"
+    );
+    assert!(
+        vkapi::get_owner_id(&clients.user).await.is_ok(),
+        "Unable to get user ID"
+    );
 }
