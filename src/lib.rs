@@ -29,12 +29,11 @@ pub async fn run(config: TokenConfig) -> Result<(), Box<dyn Error>> {
     pin_mut!(stream);
 
     let shared_cfg = Arc::new(Mutex::new(cfg));
-    println!("-----------------\nStarted polling!-----------------");
+    println!("-----------------Started polling!-----------------");
     while let Some(event) = stream.next().await {
         match event {
             Ok(event) => {
                 tokio::spawn(event.handle(Arc::clone(&shared_cfg)));
-                ()
             }
             Err(err) => eprintln!("{}", err),
         }

@@ -2,6 +2,8 @@ use crate::config::{AppConfig, TokenConfig};
 use serde::{Deserialize, Serialize};
 use vkclient::{VkApi, VkApiError};
 
+pub mod types;
+
 pub struct Clients {
     pub user: VkApi,
     pub group: VkApi,
