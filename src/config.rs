@@ -45,7 +45,7 @@ impl AppConfig {
     }
 
     pub async fn load_ids(&mut self) {
-        if let None = self.group_id {
+        if self.group_id.is_none() {
             self.group_id = Some(vkapi::get_my_group_id().await.unwrap());
         }
         if self.admin_chat_ids.is_empty() {

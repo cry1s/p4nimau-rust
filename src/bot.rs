@@ -37,7 +37,7 @@ impl Event {
 }
 
 fn handle_admin_commands(msg: VkMessageData, _cfg: Arc<Mutex<AppConfig>>) {
-    let mut cmd = msg.text.trim().split_whitespace();
+    let mut cmd = msg.text.split_whitespace();
     let Some(header) = cmd.next() else { return };
     match header.to_lowercase().as_str() {
         "hello" =>{

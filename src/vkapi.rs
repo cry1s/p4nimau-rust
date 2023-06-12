@@ -3,7 +3,7 @@ use std::env;
 use crate::config::AppConfig;
 use dotenvy_macro::dotenv;
 use serde::{Deserialize, Serialize};
-use vkclient::{VkApi, VkApiError, List};
+use vkclient::{VkApi, VkApiError};
 
 pub mod types;
 
