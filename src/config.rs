@@ -29,6 +29,7 @@ pub struct AppConfig {
     pub anecdote: Anecdote,
     pub checkok: CheckOk,
     pub unresolved: Unresolved,
+    pub error: ErrorMsg,
 }
 
 impl AppConfig {
@@ -101,6 +102,12 @@ pub struct Unresolved {
     chance_of_answer: f32,
 }
 
+#[derive(Serialize, Deserialize, Default)]
+pub struct ErrorMsg {
+    answers: Vec<String>,
+    chance_of_answer: f32,
+}
+
 macro_rules! impl_commandanswers {
     ($x:ty) => {
         impl CommandAnswers for $x {
@@ -126,3 +133,4 @@ macro_rules! impl_commandanswers {
 impl_commandanswers!(Unresolved);
 impl_commandanswers!(CheckOk);
 impl_commandanswers!(Anecdote);
+impl_commandanswers!(ErrorMsg);
