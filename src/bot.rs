@@ -29,14 +29,9 @@ impl Event {
             Event::MessageNew(msg) => msg.message,
         };
         println!("{:#?}", msg);
-        let (admins, mains) = async {
-            let config = cfg.lock().await;
-            (config.admin_chat_ids.clone(), config.main_chat_ids.clone())
-        }
-        .await;
 
-        if !mains.contains(&msg.peer_id) {
-            if !admins.contains(&msg.from_id) {
+        if !cfg.lock().await.main_chat_ids.contains(&msg.peer_id) {
+            if !cfg.lock().await.admin_chat_ids.contains(&msg.from_id) {
                 return;
             }
             return handle_admin_commands(msg, cfg, user_client, group_client);
