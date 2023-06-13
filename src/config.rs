@@ -28,6 +28,7 @@ pub struct AppConfig {
     pub main_chat_ids: Vec<i32>,
     pub anecdote: Anecdote,
     pub checkok: CheckOk,
+    pub unresolved: Unresolved,
 }
 
 impl AppConfig {
@@ -86,23 +87,6 @@ pub struct Anecdote {
     pub chance_of_answer: f32,
 }
 
-impl CommandAnswers for Anecdote {
-    fn get_possible_answers(&self) -> &Vec<String> {
-        &self.answers
-    }
-    fn get_mut_possible_answers(&mut self) -> &mut Vec<String> {
-        &mut self.answers
-    }
-
-    fn get_chance_of_answer(&self) -> f32 {
-        self.chance_of_answer
-    }
-
-    fn get_mut_chance_of_answer(&mut self) -> &mut f32 {
-        &mut self.chance_of_answer
-    }
-}
-
 #[derive(Serialize, Deserialize, Default)]
 pub struct CheckOk {
     pub trigger_phrase: String,
@@ -110,20 +94,35 @@ pub struct CheckOk {
     pub chance_of_answer: f32,
 }
 
-impl CommandAnswers for CheckOk {
-    fn get_possible_answers(&self) -> &Vec<String> {
-        &self.answers
-    }
 
-    fn get_mut_possible_answers(&mut self) -> &mut Vec<String> {
-        &mut self.answers
-    }
-
-    fn get_chance_of_answer(&self) -> f32 {
-        self.chance_of_answer
-    }
-
-    fn get_mut_chance_of_answer(&mut self) -> &mut f32 {
-        &mut self.chance_of_answer
-    }
+#[derive(Serialize, Deserialize, Default)]
+pub struct Unresolved {
+    answers: Vec<String>,
+    chance_of_answer: f32,
 }
+
+macro_rules! impl_commandanswers {
+    ($x:ty) => {
+        impl CommandAnswers for $x {
+            fn get_possible_answers(&self) -> &Vec<String> {
+                &self.answers
+            }
+        
+            fn get_mut_possible_answers(&mut self) -> &mut Vec<String> {
+                &mut self.answers
+            }
+        
+            fn get_chance_of_answer(&self) -> f32 {
+                self.chance_of_answer
+            }
+        
+            fn get_mut_chance_of_answer(&mut self) -> &mut f32 {
+                &mut self.chance_of_answer
+            }
+        }
+    };
+}
+
+impl_commandanswers!(Unresolved);
+impl_commandanswers!(CheckOk);
+impl_commandanswers!(Anecdote);
