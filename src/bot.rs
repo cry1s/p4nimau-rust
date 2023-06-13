@@ -48,15 +48,13 @@ async fn handle_admin_commands(
     let mut cmd = msg.text.split_whitespace();
     let Some(header) = cmd.next() else { return };
     match header.to_lowercase().as_str() {
-        "hello" => {
-            msg.reply("world!", group_client);
-        }
         "cfg" => msg.reply(
             serde_json::to_string_pretty(&*cfg.lock().await)
                 .unwrap()
                 .as_str(),
             group_client,
         ),
+        
         _ => (),
     }
 }
