@@ -1,4 +1,8 @@
+use std::sync::Arc;
+
 use serde::{Deserialize, Serialize};
+
+use super::GroupClient;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct VkMessage {
@@ -18,8 +22,8 @@ pub struct VkMessageData {
 }
 
 impl VkMessageData {
-    pub fn reply(&self, msg: &str) {
-        crate::vkapi::send_reply(
+    pub fn reply(&self, msg: &str, client: Arc<GroupClient>) {
+        client.send_reply(
             self.peer_id,
             self.conversation_message_id,
             msg.to_string(),

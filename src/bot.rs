@@ -1,22 +1,30 @@
-use std::{sync::Arc};
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
 use crate::{
     config::AppConfig,
-    vkapi::types::{VkMessage, VkMessageData},
+    vkapi::{
+        types::{VkMessage, VkMessageData},
+        GroupClient, UserClient,
+    },
 };
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type", content = "object")]
 #[serde(rename_all = "snake_case")]
 pub enum Event {
-    MessageNew(VkMessage)
+    MessageNew(VkMessage),
 }
 
 impl Event {
-    pub async fn handle(self, cfg: Arc<Mutex<AppConfig>>) {
+    pub async fn handle(
+        self,
+        cfg: Arc<Mutex<AppConfig>>,
+        user_client: Arc<UserClient>,
+        group_client: Arc<GroupClient>,
+    ) {
         let msg = match self {
             Event::MessageNew(msg) => msg.message,
         };
@@ -24,25 +32,30 @@ impl Event {
         let (admins, mains) = async {
             let config = cfg.lock().await;
             (config.admin_chat_ids.clone(), config.main_chat_ids.clone())
-        }.await;
+        }
+        .await;
 
         if !mains.contains(&msg.peer_id) {
             if !admins.contains(&msg.from_id) {
                 return;
             }
-            return handle_admin_commands(msg, cfg);
+            return handle_admin_commands(msg, cfg, user_client, group_client);
         }
-        
     }
 }
 
-fn handle_admin_commands(msg: VkMessageData, _cfg: Arc<Mutex<AppConfig>>) {
+fn handle_admin_commands(
+    msg: VkMessageData,
+    _cfg: Arc<Mutex<AppConfig>>,
+    _user_client: Arc<UserClient>,
+    group_client: Arc<GroupClient>,
+) {
     let mut cmd = msg.text.split_whitespace();
     let Some(header) = cmd.next() else { return };
     match header.to_lowercase().as_str() {
-        "hello" =>{
-            msg.reply("world!");
-        },
-        _ => ()
+        "hello" => {
+            msg.reply("world!", group_client);
+        }
+        _ => (),
     }
 }

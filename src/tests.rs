@@ -1,6 +1,6 @@
 use crate::{
     config::AppConfig,
-    vkapi::{self, get_clients},
+    vkapi::get_clients,
 };
 use serde::Deserialize;
 
@@ -45,11 +45,11 @@ async fn clients_works() {
     struct Empty {}
 
     let user_request: Result<Empty, vkclient::VkApiError> =
-        clients.user.send_request("account.getInfo", ()).await;
+        clients.user.0.send_request("account.getInfo", ()).await;
     assert!(user_request.is_ok(), "User request failed!");
 
     let group_request: Result<Empty, vkclient::VkApiError> = clients
-        .group
+        .group.0
         .send_request("groups.getTokenPermissions", ())
         .await;
     assert!(group_request.is_ok(), "Group request failed!")
@@ -72,12 +72,13 @@ fn config_read_write() {
 
 #[tokio::test]
 async fn get_ids() {
+    let clients = get_clients();
     assert!(
-        vkapi::get_my_group_id().await.is_ok(),
+        clients.group.get_my_group_id().await.is_ok(),
         "Unable to get group ID"
     );
     assert!(
-        vkapi::get_owner_id().await.is_ok(),
+        clients.user.get_owner_id().await.is_ok(),
         "Unable to get user ID"
     );
 }
