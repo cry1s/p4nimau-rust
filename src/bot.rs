@@ -34,14 +34,14 @@ impl Event {
             if !cfg.lock().await.admin_chat_ids.contains(&msg.from_id) {
                 return;
             }
-            return handle_admin_commands(msg, cfg, user_client, group_client);
+            return handle_admin_commands(msg, cfg, user_client, group_client).await;
         }
     }
 }
 
-fn handle_admin_commands(
+async fn handle_admin_commands(
     msg: VkMessageData,
-    _cfg: Arc<Mutex<AppConfig>>,
+    cfg: Arc<Mutex<AppConfig>>,
     _user_client: Arc<UserClient>,
     group_client: Arc<GroupClient>,
 ) {
@@ -51,6 +51,12 @@ fn handle_admin_commands(
         "hello" => {
             msg.reply("world!", group_client);
         }
+        "cfg" => msg.reply(
+            serde_json::to_string_pretty(&*cfg.lock().await)
+                .unwrap()
+                .as_str(),
+            group_client,
+        ),
         _ => (),
     }
 }
