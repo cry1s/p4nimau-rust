@@ -67,7 +67,7 @@ impl Command for SwitchMain {
                 mut_cfg.main_chat_ids.retain(|&x| x != msg.peer_id);
                 "no more main".to_string()
             } else {
-                mut_cfg.admin_chat_ids.push(msg.peer_id);
+                mut_cfg.main_chat_ids.push(msg.peer_id);
                 "now this chat is main".to_string()
             },
             group_client,
