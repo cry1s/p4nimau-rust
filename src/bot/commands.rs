@@ -53,9 +53,9 @@ pub struct Help;
 
 pub struct Get;
 
-pub struct MakeMain;
+pub struct SwitchMain;
 
-impl Command for MakeMain {
+impl Command for SwitchMain {
     fn alias(&self) -> String {
         "switch main".to_string()
     }
