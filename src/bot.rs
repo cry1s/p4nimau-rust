@@ -21,8 +21,6 @@ pub enum Event {
     // may be new events, but i need only this one
 }
 
-
-
 impl Event {
     pub fn handle(
         self,
@@ -63,6 +61,7 @@ impl Event {
             execute!(EditForbidden);
             execute!(EditSuccess);
             execute!(EditUnresolved);
+            execute!(Get);
         }
     }
 }

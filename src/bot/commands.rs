@@ -51,6 +51,39 @@ pub struct DelAdmin;
 
 pub struct Help;
 
+pub struct Get;
+
+impl Command for Get {
+    fn alias(&self) -> String {
+        "get".to_string()
+    }
+
+    fn code(&self, msg: VkMessageData, cfg: Arc<Mutex<AppConfig>>, group_client: Arc<GroupClient>) {
+        let arg = msg.text.replace(self.alias().as_str(), "");
+        let mut_cfg = cfg.lock().unwrap();
+        msg.reply(
+            "[\n".to_owned()
+                + match arg.trim() {
+                    "anecdote" => mut_cfg.anecdote.get_possible_answers(),
+                    "checkok" => mut_cfg.checkok.get_possible_answers(),
+                    "error" => mut_cfg.error.get_possible_answers(),
+                    "success" => mut_cfg.success.get_possible_answers(),
+                    "unresolved" => mut_cfg.unresolved.get_possible_answers(),
+                    "forbidden" => mut_cfg.forbidden.get_possible_answers(),
+                    _ => {
+                        drop(mut_cfg);
+                        return unresolved(msg, cfg, group_client)
+                    }
+                }
+                .iter()
+                .map(|x| x.to_string() + "\n")
+                .collect::<String>()
+                .as_str() + "]",
+            group_client,
+        );
+    }
+}
+
 impl Command for Help {
     fn alias(&self) -> String {
         "help".to_string()
@@ -61,7 +94,8 @@ impl Command for Help {
     }
 
     fn code(&self, msg: VkMessageData, cfg: Arc<Mutex<AppConfig>>, group_client: Arc<GroupClient>) {
-        msg.reply("help:
+        msg.reply(
+            "help:
         get cfg
         get my id
         add admin [id]
@@ -69,13 +103,17 @@ impl Command for Help {
         add [anecdote] answer [new answer]
         del [anecdote] answer [old answer]
         edit [anecdote] chance [new chance]
+        get [anecdote]
         💅💅anecdote
         💅💅checkok
         💅💅error
         💅💅unresolved
         💅💅forbidden
         💅💅success
-        ".to_string(), group_client)
+        "
+            .to_string(),
+            group_client,
+        )
     }
 }
 
@@ -91,7 +129,12 @@ impl Command for DelAdmin {
             Err(e) => return error(msg, cfg, group_client, e.to_string()),
         };
         if !cfg.lock().unwrap().admin_chat_ids.contains(&del_admin) {
-            error(msg, cfg, group_client, format!("admin {} doesnt exists", del_admin));
+            error(
+                msg,
+                cfg,
+                group_client,
+                format!("admin {} doesnt exists", del_admin),
+            );
             return;
         }
         let mut mut_cfg = cfg.lock().unwrap();
@@ -114,7 +157,12 @@ impl Command for AddAdmin {
             Err(e) => return error(msg, cfg, group_client, e.to_string()),
         };
         if cfg.lock().unwrap().admin_chat_ids.contains(&new_admin) {
-            error(msg, cfg, group_client, format!("admin {} already exists", new_admin));
+            error(
+                msg,
+                cfg,
+                group_client,
+                format!("admin {} already exists", new_admin),
+            );
             return;
         }
         let mut mut_cfg = cfg.lock().unwrap();
@@ -147,15 +195,15 @@ impl Command for GetMyId {
         Role::User
     }
 
-    fn code(&self, msg: VkMessageData, _cfg: Arc<Mutex<AppConfig>>, group_client: Arc<GroupClient>) {
-        msg.reply(
-            msg.from_id.to_string(),
-            group_client,
-        )
+    fn code(
+        &self,
+        msg: VkMessageData,
+        _cfg: Arc<Mutex<AppConfig>>,
+        group_client: Arc<GroupClient>,
+    ) {
+        msg.reply(msg.from_id.to_string(), group_client)
     }
 }
-
-
 
 macro_rules! command {
     ($x:ident, $alias:ident, $name:expr, add) => {
