@@ -118,7 +118,7 @@ impl GroupClient {
                         peer_id,
                         message,
                         forward: Some(
-                            serde_json::to_string(&Forward {
+                            serde_json::to_string_pretty(&Forward {
                                 peer_id,
                                 conversation_message_ids,
                                 is_reply: 1,

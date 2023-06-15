@@ -36,9 +36,10 @@ pub struct AppConfig {
 
 impl AppConfig {
     pub fn new() -> Self {
-        let json = &read_to_string("config.json");
+        let json = read_to_string("config.json");
+        dbg!(&json);
         match json {
-            Ok(json) => serde_json::from_str(json).unwrap_or(Self::default()),
+            Ok(json) => serde_json::from_str(&json).unwrap_or(Self::default()),
             Err(_) => Self::default(),
         }
     }

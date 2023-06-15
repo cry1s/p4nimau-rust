@@ -45,6 +45,86 @@ pub struct GetCfg;
 
 pub struct GetMyId;
 
+pub struct AddAdmin;
+
+pub struct DelAdmin;
+
+pub struct Help;
+
+impl Command for Help {
+    fn alias(&self) -> String {
+        "help".to_string()
+    }
+
+    fn role(&self) -> Role {
+        Role::User
+    }
+
+    fn code(&self, msg: VkMessageData, cfg: Arc<Mutex<AppConfig>>, group_client: Arc<GroupClient>) {
+        msg.reply("help:
+        get cfg
+        get my id
+        add admin [id]
+        del admin [id]
+        add [anecdote] answer [new answer]
+        del [anecdote] answer [old answer]
+        edit [anecdote] chance [new chance]
+        💅💅anecdote
+        💅💅checkok
+        💅💅error
+        💅💅unresolved
+        💅💅forbidden
+        💅💅success
+        ".to_string(), group_client)
+    }
+}
+
+impl Command for DelAdmin {
+    fn alias(&self) -> String {
+        "del admin".to_string()
+    }
+
+    fn code(&self, msg: VkMessageData, cfg: Arc<Mutex<AppConfig>>, group_client: Arc<GroupClient>) {
+        let del_admin = msg.text.replace(self.alias().as_str(), "");
+        let del_admin: i32 = match del_admin.trim().parse() {
+            Ok(id) => id,
+            Err(e) => return error(msg, cfg, group_client, e.to_string()),
+        };
+        if !cfg.lock().unwrap().admin_chat_ids.contains(&del_admin) {
+            error(msg, cfg, group_client, format!("admin {} doesnt exists", del_admin));
+            return;
+        }
+        let mut mut_cfg = cfg.lock().unwrap();
+        mut_cfg.admin_chat_ids.retain(|id| *id != del_admin);
+        mut_cfg.write();
+        drop(mut_cfg);
+        success(msg, cfg, group_client)
+    }
+}
+
+impl Command for AddAdmin {
+    fn alias(&self) -> String {
+        "add admin".to_string()
+    }
+
+    fn code(&self, msg: VkMessageData, cfg: Arc<Mutex<AppConfig>>, group_client: Arc<GroupClient>) {
+        let new_admin = msg.text.replace(self.alias().as_str(), "");
+        let new_admin: i32 = match new_admin.trim().parse() {
+            Ok(id) => id,
+            Err(e) => return error(msg, cfg, group_client, e.to_string()),
+        };
+        if cfg.lock().unwrap().admin_chat_ids.contains(&new_admin) {
+            error(msg, cfg, group_client, format!("admin {} already exists", new_admin));
+            return;
+        }
+        let mut mut_cfg = cfg.lock().unwrap();
+        mut_cfg.admin_chat_ids.push(new_admin);
+        mut_cfg.write();
+        drop(mut_cfg);
+        success(msg, cfg, group_client)
+    }
+}
+
 impl Command for GetCfg {
     fn alias(&self) -> String {
         "get cfg".to_string()
@@ -52,7 +132,7 @@ impl Command for GetCfg {
 
     fn code(&self, msg: VkMessageData, cfg: Arc<Mutex<AppConfig>>, group_client: Arc<GroupClient>) {
         msg.reply(
-            serde_json::to_string(&*cfg.lock().unwrap()).unwrap(),
+            serde_json::to_string_pretty(&*cfg.lock().unwrap()).unwrap(),
             group_client,
         )
     }
@@ -67,13 +147,15 @@ impl Command for GetMyId {
         Role::User
     }
 
-    fn code(&self, msg: VkMessageData, cfg: Arc<Mutex<AppConfig>>, group_client: Arc<GroupClient>) {
+    fn code(&self, msg: VkMessageData, _cfg: Arc<Mutex<AppConfig>>, group_client: Arc<GroupClient>) {
         msg.reply(
-            serde_json::to_string(&*cfg.lock().unwrap()).unwrap(),
+            msg.from_id.to_string(),
             group_client,
         )
     }
 }
+
+
 
 macro_rules! command {
     ($x:ident, $alias:ident, $name:expr, add) => {
@@ -134,6 +216,34 @@ macro_rules! command {
             }
         }
     };
+    ($x:ident, $alias:ident, $name:expr, edit chance) => {
+        pub struct $x;
+        impl Command for $x {
+            fn alias(&self) -> String {
+                format!("edit {} chance", $name)
+            }
+
+            fn code(
+                &self,
+                msg: VkMessageData,
+                cfg: Arc<Mutex<AppConfig>>,
+                group_client: Arc<GroupClient>,
+            ) {
+                let new_chance = msg.text.replace(self.alias().as_str(), "");
+                let new_chance = new_chance.trim().parse::<f32>();
+                match new_chance {
+                    Ok(chance) => {
+                        let mut mut_cfg = cfg.lock().unwrap();
+                        *mut_cfg.$alias.get_mut_chance_of_answer() = chance;
+                        mut_cfg.write();
+                        drop(mut_cfg);
+                        success(msg, cfg, group_client);
+                    }
+                    Err(_) => unresolved(msg, cfg, group_client),
+                }
+            }
+        }
+    };
 }
 
 command!(AddAnecdote, anecdote, "anecdote", add);
@@ -149,6 +259,13 @@ command!(DelErrorMsg, error, "error", del);
 command!(DelUnresolved, unresolved, "unresolved", del);
 command!(DelForbidden, forbidden, "forbidden", del);
 command!(DelSuccess, success, "success", del);
+
+command!(EditAnecdote, anecdote, "anecdote", edit chance);
+command!(EditCheckOk, checkok, "checkok", edit chance);
+command!(EditErrorMsg, error, "error", edit chance);
+command!(EditUnresolved, unresolved, "unresolved", edit chance);
+command!(EditForbidden, forbidden, "forbidden", edit chance);
+command!(EditSuccess, success, "success", edit chance);
 
 pub(crate) fn unresolved(
     msg: VkMessageData,
