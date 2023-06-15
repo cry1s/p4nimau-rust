@@ -75,12 +75,12 @@ impl Command for GetMyId {
     }
 }
 
-macro_rules! command_add {
-    ($x:ident $alias:expr) => {
+macro_rules! command {
+    ($x:ident, $alias:ident, $name:expr, add) => {
         pub struct $x;
         impl Command for $x {
             fn alias(&self) -> String {
-                format!("add {} answer", $alias)
+                format!("add {} answer", $name)
             }
 
             fn code(
@@ -92,17 +92,7 @@ macro_rules! command_add {
                 let new_answer = msg.text.replace(self.alias().as_str(), "");
                 let new_answer = new_answer.trim();
                 let mut mut_cfg = cfg.lock().unwrap();
-                let answers = match $alias {
-                    "anecdote" => mut_cfg.anecdote.get_mut_possible_answers(),
-                    "error" => mut_cfg.error.get_mut_possible_answers(),
-                    "unresolved" => mut_cfg.unresolved.get_mut_possible_answers(),
-                    "checkok" => mut_cfg.checkok.get_mut_possible_answers(),
-                    "forbidden" => mut_cfg.forbidden.get_mut_possible_answers(),
-                    "success" => mut_cfg.success.get_mut_possible_answers(),
-                    _ => {
-                        panic!("type is not exists")
-                    }
-                };
+                let answers = mut_cfg.$alias.get_mut_possible_answers();
                 if answers.contains(&new_answer.to_string()) {
                     drop(mut_cfg);
                     error(msg, cfg, group_client, "answer already exists".to_string());
@@ -115,19 +105,50 @@ macro_rules! command_add {
             }
         }
     };
+    ($x:ident, $alias:ident, $name:expr, del) => {
+        pub struct $x;
+        impl Command for $x {
+            fn alias(&self) -> String {
+                format!("del {} answer", $name)
+            }
+
+            fn code(
+                &self,
+                msg: VkMessageData,
+                cfg: Arc<Mutex<AppConfig>>,
+                group_client: Arc<GroupClient>,
+            ) {
+                let del_answer = msg.text.replace(self.alias().as_str(), "");
+                let del_answer = del_answer.trim();
+                let mut mut_cfg = cfg.lock().unwrap();
+                let answers = mut_cfg.$alias.get_mut_possible_answers();
+                if !answers.contains(&del_answer.to_string()) {
+                    drop(mut_cfg);
+                    error(msg, cfg, group_client, "answer doesnt exists".to_string());
+                    return;
+                }
+                answers.retain(|answer| answer != del_answer);
+                mut_cfg.write();
+                drop(mut_cfg);
+                success(msg, cfg, group_client);
+            }
+        }
+    };
 }
 
-command_add!(AddAnecdote "anecdote");
+command!(AddAnecdote, anecdote, "anecdote", add);
+command!(AddCheckOk, checkok, "checkok", add);
+command!(AddErrorMsg, error, "error", add);
+command!(AddUnresolved, unresolved, "unresolved", add);
+command!(AddForbidden, forbidden, "forbidden", add);
+command!(AddSuccess, success, "success", add);
 
-command_add!(AddCheckOk "checkok");
-
-command_add!(AddErrorMsg "error");
-
-command_add!(AddUnresolved "unresolved");
-
-command_add!(AddForbidden "forbidden");
-
-command_add!(AddSuccess "success");
+command!(DelAnecdote, anecdote, "anecdote", del);
+command!(DelCheckOk, checkok, "checkok", del);
+command!(DelErrorMsg, error, "error", del);
+command!(DelUnresolved, unresolved, "unresolved", del);
+command!(DelForbidden, forbidden, "forbidden", del);
+command!(DelSuccess, success, "success", del);
 
 pub(crate) fn unresolved(
     msg: VkMessageData,
