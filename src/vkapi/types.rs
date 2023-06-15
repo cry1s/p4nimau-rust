@@ -22,11 +22,11 @@ pub struct VkMessageData {
 }
 
 impl VkMessageData {
-    pub fn reply(&self, msg: &str, client: Arc<GroupClient>) {
+    pub fn reply(&self, message: String, client: Arc<GroupClient>) {
         client.send_reply(
             self.peer_id,
             self.conversation_message_id,
-            msg.to_string(),
+            message,
         );
     }
 }
@@ -127,4 +127,49 @@ pub struct VkWall {
     pub id: i32,
     pub text: String,
     pub attachments: Vec<VkWallAttachment>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Conversation {
+    pub chat_settings: Option<ChatSettings>,
+    pub peer: Peer,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Peer {
+    pub id: i32,
+    pub local_id: i32,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ChatSettings {
+    pub title: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct SendMessageRequest {
+    pub random_id: i32,
+    pub peer_id: i32,
+    pub message: String,
+    pub forward: Option<String>,
+}
+#[derive(Serialize)]
+pub struct Forward {
+    pub peer_id: i32,
+    pub conversation_message_ids: i32,
+    pub is_reply: i32,
+}
+#[derive(Deserialize, Debug)]
+pub struct SendMessageResponse {
+    #[serde(rename = "peer_id")]
+    pub _peer_id: i32,
+    #[serde(rename = "message_id")]
+    pub _message_id: i32,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Profile {
+    pub id: i32,
+    pub first_name: String,
+    pub last_name: String,
 }

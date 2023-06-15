@@ -30,6 +30,8 @@ pub struct AppConfig {
     pub checkok: CheckOk,
     pub unresolved: Unresolved,
     pub error: ErrorMsg,
+    pub forbidden: Forbidden,
+    pub success: Success,
 }
 
 impl AppConfig {
@@ -95,19 +97,6 @@ pub struct CheckOk {
     pub chance_of_answer: f32,
 }
 
-
-#[derive(Serialize, Deserialize, Default)]
-pub struct Unresolved {
-    answers: Vec<String>,
-    chance_of_answer: f32,
-}
-
-#[derive(Serialize, Deserialize, Default)]
-pub struct ErrorMsg {
-    answers: Vec<String>,
-    chance_of_answer: f32,
-}
-
 macro_rules! impl_commandanswers {
     ($x:ty) => {
         impl CommandAnswers for $x {
@@ -130,7 +119,21 @@ macro_rules! impl_commandanswers {
     };
 }
 
-impl_commandanswers!(Unresolved);
+macro_rules! answer_struct {
+    ($x:ident) => {
+        #[derive(Serialize, Deserialize, Default)]
+        pub struct $x {
+            answers: Vec<String>,
+            chance_of_answer: f32,
+        }
+        
+        impl_commandanswers!($x);
+    };
+}
+
 impl_commandanswers!(CheckOk);
 impl_commandanswers!(Anecdote);
-impl_commandanswers!(ErrorMsg);
+answer_struct!(Unresolved);
+answer_struct!(ErrorMsg);
+answer_struct!(Forbidden);
+answer_struct!(Success);

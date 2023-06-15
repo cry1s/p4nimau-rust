@@ -1,4 +1,4 @@
-use std::{error::Error, sync::Arc};
+use std::{error::Error, sync::{Arc, Mutex}};
 
 mod bot;
 mod config;
@@ -7,7 +7,6 @@ mod vkapi;
 use crate::bot::Event;
 pub use crate::config::TokenConfig;
 use futures_util::{pin_mut, StreamExt};
-use tokio::sync::Mutex;
 use vkapi::get_clients;
 use vkclient::longpoll::LongPollRequest;
 
@@ -30,20 +29,22 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
     let shared_group_client = Arc::new(clients.group);
     let shared_user_client = Arc::new(clients.user);
     let shared_cfg = Arc::new(Mutex::new(cfg));
-    println!("-----------------Started polling!-----------------");
+    shared_group_client.clone().send_msg(
+        shared_cfg.lock().unwrap().admin_chat_ids[0],
+        "Starting polling".to_owned(),
+    );
+    println!("Started polling!");
     while let Some(event) = stream.next().await {
         match event {
-            Ok(event) => {
-                tokio::spawn(event.handle(
-                    Arc::clone(&shared_cfg),
-                    Arc::clone(&shared_user_client),
-                    Arc::clone(&shared_group_client)
-                ));
-            }
+            Ok(event) => event.handle(
+                Arc::clone(&shared_cfg),
+                Arc::clone(&shared_user_client),
+                Arc::clone(&shared_group_client),
+            ),
             Err(err) => eprintln!("{}", err),
         }
     }
-    Ok(())
+    Ok(())  
 }
 
 #[cfg(test)]

@@ -1,9 +1,11 @@
 use std::{env, sync::Arc};
 
-use crate::config::AppConfig;
+use crate::{config::AppConfig};
 use dotenvy_macro::dotenv;
 use serde::{Deserialize, Serialize};
-use vkclient::{VkApi, VkApiError, longpoll::VkLongPoll};
+use vkclient::{longpoll::VkLongPoll, VkApi, VkApiError};
+
+use self::types::{Forward, SendMessageRequest, SendMessageResponse};
 
 pub mod types;
 
@@ -58,7 +60,10 @@ impl GroupClient {
     pub fn longpoll(&self) -> VkLongPoll {
         self.0.longpoll()
     }
-    pub async fn get_long_poll_server(&self, cfg: &AppConfig) -> Result<LongPollServer, VkApiError> {
+    pub async fn get_long_poll_server(
+        &self,
+        cfg: &AppConfig,
+    ) -> Result<LongPollServer, VkApiError> {
         #[derive(Serialize)]
         struct Request {
             group_id: i32,
@@ -78,53 +83,51 @@ impl GroupClient {
         struct GroupID {
             id: i32,
         }
-        let request: Vec<GroupID> = self.0
-            .send_request("groups.getById", ())
-            .await?;
+        let request: Vec<GroupID> = self.0.send_request("groups.getById", ()).await?;
         Ok(request[0].id)
     }
-
-    pub fn send_reply(
-        self: Arc<GroupClient>,
-        peer_id: i32,
-        conversation_message_ids: i32,
-        message: String,
-    ) {
-        #[derive(Serialize)]
-        struct SendMessageRequest {
-            random_id: i32,
-            peer_id: i32,
-            message: String,
-            forward: String,
-        }
-        #[derive(Serialize)]
-        struct Forward {
-            peer_id: i32,
-            conversation_message_ids: i32,
-            is_reply: i32,
-        }
-        #[derive(Deserialize, Debug)]
-        struct SendMessageResponse {
-            #[serde(rename = "peer_id")]
-            _peer_id: i32,
-            #[serde(rename = "message_id")]
-            _message_id: i32,
-        }
+    pub fn send_msg(self: Arc<GroupClient>, peer_id: i32, message: String) {
         tokio::spawn(async move {
-            let _request = Arc::clone(&self).0
+            let _request = self
+                .0
                 .send_request::<SendMessageResponse, SendMessageRequest, &str>(
                     "messages.send",
                     SendMessageRequest {
                         random_id: 0,
                         peer_id,
                         message,
-                        forward: serde_json::to_string(&Forward {
-                            peer_id,
-                            conversation_message_ids,
-                            is_reply: 1,
-                        }).unwrap(),
+                        forward: None,
                     },
-                ).await;
+                )
+                .await;
+        });
+    }
+    pub fn send_reply(
+        self: Arc<GroupClient>,
+        peer_id: i32,
+        conversation_message_ids: i32,
+        message: String,
+    ) {
+        tokio::spawn(async move {
+            let _request = self
+                .0
+                .send_request::<SendMessageResponse, SendMessageRequest, &str>(
+                    "messages.send",
+                    SendMessageRequest {
+                        random_id: 0,
+                        peer_id,
+                        message,
+                        forward: Some(
+                            serde_json::to_string(&Forward {
+                                peer_id,
+                                conversation_message_ids,
+                                is_reply: 1,
+                            })
+                            .unwrap(),
+                        ),
+                    },
+                )
+                .await;
         });
     }
 }

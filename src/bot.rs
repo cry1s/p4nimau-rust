@@ -1,7 +1,7 @@
-use std::sync::Arc;
-
 use serde::{Deserialize, Serialize};
-use tokio::sync::Mutex;
+use std::sync::{Arc, Mutex};
+
+mod commands;
 
 use crate::{
     config::AppConfig,
@@ -16,10 +16,11 @@ use crate::{
 #[serde(rename_all = "snake_case")]
 pub enum Event {
     MessageNew(VkMessage),
+    // may be new events, but i need only this one
 }
 
 impl Event {
-    pub async fn handle(
+    pub fn handle(
         self,
         cfg: Arc<Mutex<AppConfig>>,
         user_client: Arc<UserClient>,
@@ -28,33 +29,16 @@ impl Event {
         let msg = match self {
             Event::MessageNew(msg) => msg.message,
         };
-        println!("{:#?}", msg);
-
-        if !cfg.lock().await.main_chat_ids.contains(&msg.peer_id) {
-            if !cfg.lock().await.admin_chat_ids.contains(&msg.from_id) {
-                return;
-            }
-            return handle_admin_commands(msg, cfg, user_client, group_client).await;
-        }
+        println!("got msg {:#?}", msg);
+        handle_admin_commands(msg, cfg, user_client, group_client)
     }
 }
 
-async fn handle_admin_commands(
-    msg: VkMessageData,
-    cfg: Arc<Mutex<AppConfig>>,
+fn handle_admin_commands(
+    _msg: VkMessageData,
+    _cfg: Arc<Mutex<AppConfig>>,
     _user_client: Arc<UserClient>,
-    group_client: Arc<GroupClient>,
+    _group_client: Arc<GroupClient>,
 ) {
-    let mut cmd = msg.text.split_whitespace();
-    let Some(header) = cmd.next() else { return };
-    match header.to_lowercase().as_str() {
-        "cfg" => msg.reply(
-            serde_json::to_string_pretty(&*cfg.lock().await)
-                .unwrap()
-                .as_str(),
-            group_client,
-        ),
-        
-        _ => (),
-    }
+    todo!()
 }
