@@ -53,6 +53,29 @@ pub struct Help;
 
 pub struct Get;
 
+pub struct MakeMain;
+
+impl Command for MakeMain {
+    fn alias(&self) -> String {
+        "switch main".to_string()
+    }
+
+    fn code(&self, msg: VkMessageData, cfg: Arc<Mutex<AppConfig>>, group_client: Arc<GroupClient>) {
+        let mut mut_cfg = cfg.lock().unwrap();
+        msg.reply(
+            if mut_cfg.main_chat_ids.contains(&msg.peer_id) {
+                mut_cfg.main_chat_ids.retain(|&x| x != msg.peer_id);
+                "no more main".to_string()
+            } else {
+                mut_cfg.admin_chat_ids.push(msg.peer_id);
+                "now this chat is main".to_string()
+            },
+            group_client,
+        );
+        mut_cfg.write();
+    }
+}
+
 impl Command for Get {
     fn alias(&self) -> String {
         "get".to_string()
@@ -72,13 +95,14 @@ impl Command for Get {
                     "forbidden" => mut_cfg.forbidden.get_possible_answers(),
                     _ => {
                         drop(mut_cfg);
-                        return unresolved(msg, cfg, group_client)
+                        return unresolved(msg, cfg, group_client);
                     }
                 }
                 .iter()
                 .map(|x| x.to_string() + "\n")
                 .collect::<String>()
-                .as_str() + "]",
+                .as_str()
+                + "]",
             group_client,
         );
     }
@@ -93,7 +117,12 @@ impl Command for Help {
         Role::User
     }
 
-    fn code(&self, msg: VkMessageData, cfg: Arc<Mutex<AppConfig>>, group_client: Arc<GroupClient>) {
+    fn code(
+        &self,
+        msg: VkMessageData,
+        _cfg: Arc<Mutex<AppConfig>>,
+        group_client: Arc<GroupClient>,
+    ) {
         msg.reply(
             "help:
         get cfg
@@ -104,6 +133,7 @@ impl Command for Help {
         del [anecdote] answer [old answer]
         edit [anecdote] chance [new chance]
         get [anecdote]
+        switch main
         💅💅anecdote
         💅💅checkok
         💅💅error

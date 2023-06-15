@@ -62,6 +62,7 @@ impl Event {
             execute!(EditSuccess);
             execute!(EditUnresolved);
             execute!(Get);
+            execute!(MakeMain);
         }
     }
 }
