@@ -53,6 +53,67 @@ pub struct Help;
 
 pub struct Get;
 
+pub struct CheckOkCommand(pub Arc<Mutex<AppConfig>>);
+
+pub struct EditCheckOkPhrase;
+
+pub struct EditAnecdoteLength;
+
+impl Command for EditAnecdoteLength {
+    fn alias(&self) -> String {
+        "edit anecdote len".to_string()
+    }
+
+    fn code(&self, msg: VkMessageData, cfg: Arc<Mutex<AppConfig>>, group_client: Arc<GroupClient>) {
+        let new_len = msg.text.replace(self.alias().as_str(), "").trim().parse();
+        match new_len {
+            Ok(len) => {
+                cfg.lock().unwrap().anecdote.min_length = len;
+            }
+            Err(_) => unresolved(msg, cfg, group_client),
+        }
+    }
+}
+
+impl Command for EditCheckOkPhrase {
+    fn alias(&self) -> String {
+        "edit check phrase".to_string()
+    }
+
+    fn code(&self, msg: VkMessageData, cfg: Arc<Mutex<AppConfig>>, group_client: Arc<GroupClient>) {
+        let new_phrase = msg.text.replace(self.alias().as_str(), "");
+        match new_phrase.trim() {
+            "" => unresolved(msg, cfg, group_client),
+            phrase => {
+                cfg.lock().unwrap().checkok.trigger_phrase = phrase.to_string();
+                cfg.lock().unwrap().write();
+                success(msg, cfg, group_client);
+            }
+        }
+    }
+}
+
+impl Command for CheckOkCommand {
+    fn alias(&self) -> String {
+        self.0.lock().unwrap().checkok.trigger_phrase.to_string()
+    }
+
+    fn role(&self) -> Role {
+        Role::User
+    }
+
+    fn code(
+        &self,
+        msg: VkMessageData,
+        _cfg: Arc<Mutex<AppConfig>>,
+        group_client: Arc<GroupClient>,
+    ) {
+        if let Some(answer) = self.0.lock().unwrap().checkok.get_answer() {
+            msg.reply(answer.to_string(), group_client)
+        }
+    }
+}
+
 pub struct SwitchMain;
 
 impl Command for SwitchMain {
@@ -117,12 +178,7 @@ impl Command for Help {
         Role::User
     }
 
-    fn code(
-        &self,
-        msg: VkMessageData,
-        _cfg: Arc<Mutex<AppConfig>>,
-        group_client: Arc<GroupClient>,
-    ) {
+    fn code(&self, msg: VkMessageData, cfg: Arc<Mutex<AppConfig>>, group_client: Arc<GroupClient>) {
         msg.reply(
             "help:
         get cfg
@@ -134,6 +190,8 @@ impl Command for Help {
         edit [anecdote] chance [new chance]
         get [anecdote]
         switch main
+        edit check phrase
+        edit anecdote len
         💅💅anecdote
         💅💅checkok
         💅💅error
@@ -141,7 +199,8 @@ impl Command for Help {
         💅💅forbidden
         💅💅success
         "
-            .to_string(),
+            .to_string()
+                + cfg.lock().unwrap().checkok.trigger_phrase.as_str(),
             group_client,
         )
     }

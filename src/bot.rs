@@ -63,6 +63,9 @@ impl Event {
             execute!(EditUnresolved);
             execute!(Get);
             execute!(SwitchMain);
+            execute!(EditCheckOkPhrase);
+            let checkok = CheckOkCommand(cfg.clone());
+            execute!(checkok);
         }
     }
 }
