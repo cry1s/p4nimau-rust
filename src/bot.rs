@@ -27,11 +27,12 @@ impl Event {
         cfg: Arc<Mutex<AppConfig>>,
         _user_client: Arc<UserClient>,
         group_client: Arc<GroupClient>,
+        _last_time_post: Arc<Mutex<i32>>,
     ) {
         let msg = match self {
             Event::MessageNew(msg) => msg.message,
         };
-        println!("got msg {:#?}", msg);
+        if msg.text.starts_with("!") {return;}
         if msg.attachments.is_empty() {
             macro_rules! execute {
                 ($x:expr) => {
