@@ -2,8 +2,9 @@ use std::{env, sync::Arc};
 
 use crate::{config::AppConfig};
 use dotenvy_macro::dotenv;
+use futures_util::lock::Mutex;
 use serde::{Deserialize, Serialize};
-use vkclient::{longpoll::VkLongPoll, VkApi, VkApiError};
+use vkclient::{longpoll::VkLongPoll, VkApi, VkApiError, List};
 
 use self::types::{Forward, SendMessageRequest, SendMessageResponse};
 
@@ -53,6 +54,17 @@ impl UserClient {
         }
         let request: Vec<UserID> = self.0.send_request("users.get", ()).await?;
         Ok(request[0].id)
+    }
+
+    pub fn wall_post(&self, cfg: Arc<Mutex<AppConfig>>) {
+        #[derive(Serialize)]
+        struct WallPostRequest {
+            owner_id: i32,
+            from_group: i8,
+            message: String,
+            attachments: List<Vec<String>>,
+            publish_date: Option<u32>,
+        }
     }
 }
 

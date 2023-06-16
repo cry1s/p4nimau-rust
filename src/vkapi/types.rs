@@ -13,7 +13,7 @@ pub struct VkMessage {
 pub struct VkMessageData {
     pub id: i32,
     pub conversation_message_id: i32,
-    pub date: i32,
+    pub date: u32,
     pub peer_id: i32,
     pub from_id: i32,
     pub text: String,
@@ -120,6 +120,7 @@ pub struct VkVideo {
     pub id: i32,
     pub owner_id: i32,
     pub title: String,
+    pub access_key: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
