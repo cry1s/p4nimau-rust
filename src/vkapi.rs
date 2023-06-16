@@ -1,12 +1,14 @@
-use std::{env, sync::Arc};
+use std::{
+    env,
+    sync::{Arc, Mutex},
+};
 
-use crate::{config::AppConfig};
+use crate::config::AppConfig;
 use dotenvy_macro::dotenv;
-use futures_util::lock::Mutex;
 use serde::{Deserialize, Serialize};
-use vkclient::{longpoll::VkLongPoll, VkApi, VkApiError, List};
+use vkclient::{longpoll::VkLongPoll, List, VkApi, VkApiError};
 
-use self::types::{Forward, SendMessageRequest, SendMessageResponse};
+use self::types::{Forward, SendMessageRequest, SendMessageResponse, VkMessageData};
 
 pub mod types;
 
@@ -56,15 +58,65 @@ impl UserClient {
         Ok(request[0].id)
     }
 
-    pub fn wall_post(&self, cfg: Arc<Mutex<AppConfig>>) {
+    pub fn main_wall_post(
+        self: Arc<UserClient>,
+        cfg: Arc<Mutex<AppConfig>>,
+        last_date: Arc<Mutex<u64>>,
+        msg: VkMessageData,
+    ) {
         #[derive(Serialize)]
         struct WallPostRequest {
             owner_id: i32,
             from_group: i8,
             message: String,
             attachments: List<Vec<String>>,
-            publish_date: Option<u32>,
+            publish_date: Option<u64>,
         }
+        #[derive(Deserialize, Debug)]
+        struct Response {
+            post_id: i32,
+        }
+        let publish_date = if *last_date.lock().unwrap() == 0 {
+            *last_date.lock().unwrap() = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            None
+        } else {
+            *last_date.lock().unwrap() += 3600;
+            Some(*last_date.lock().unwrap())
+        };
+        let owner_id = -cfg.lock().unwrap().group_id.unwrap();
+        let request = WallPostRequest {
+            owner_id,
+            from_group: 1,
+            message: msg.text,
+            attachments: List(
+                msg.attachments
+                    .into_iter()
+                    .map(|attachment| match attachment {
+                        types::VkMessagesAttachment::Photo { photo } => {
+                            dbg!(&photo);
+                            let largest_size = photo.get_largest_size();
+                            dbg!(&largest_size);
+                            
+                            "".to_string()
+                        }
+                        types::VkMessagesAttachment::Audio { audio } => todo!(),
+                        types::VkMessagesAttachment::Video { video } => todo!(),
+                        types::VkMessagesAttachment::Wall { wall } => todo!(),
+                        _ => "".to_string(),
+                    })
+                    .filter(|x| x != "")
+                    .collect(),
+            ),
+            publish_date,
+        };
+        tokio::spawn(async move {
+            let response: Result<Response, VkApiError> =
+                self.0.send_request("wall.post", request).await;
+            dbg!(&response);
+        });
     }
 }
 

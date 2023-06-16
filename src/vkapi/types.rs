@@ -13,7 +13,7 @@ pub struct VkMessage {
 pub struct VkMessageData {
     pub id: i32,
     pub conversation_message_id: i32,
-    pub date: u32,
+    pub date: u64,
     pub peer_id: i32,
     pub from_id: i32,
     pub text: String,
@@ -23,11 +23,7 @@ pub struct VkMessageData {
 
 impl VkMessageData {
     pub fn reply(&self, message: String, client: Arc<GroupClient>) {
-        client.send_reply(
-            self.peer_id,
-            self.conversation_message_id,
-            message,
-        );
+        client.send_reply(self.peer_id, self.conversation_message_id, message);
     }
 }
 
@@ -47,6 +43,9 @@ pub enum VkMessagesAttachment {
     Wall {
         wall: VkWall,
     },
+    Story {
+        story: VkStory,
+    },
     Doc,
     Link,
     Market,
@@ -56,6 +55,10 @@ pub enum VkMessagesAttachment {
     WallReply,
     Sticker,
     Gift,
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct VkStory {
+    pub id: i32,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -98,7 +101,22 @@ pub enum VkWallAttachment {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct VkPhoto {
     pub id: i32,
+    pub owner_id: i32,
+    pub user_id: Option<i32>,
     pub sizes: Vec<VkPhotoSizes>,
+    pub access_key: Option<String>,
+}
+
+impl VkPhoto {
+    pub fn get_largest_size(&self) -> Option<&VkPhotoSizes> {
+        self.sizes.iter().max_by_key(|x| {
+            if "opqr".contains(&x.r#type) {
+                "a"
+            } else {
+                &x.r#type
+            }
+        })
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]

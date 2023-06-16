@@ -25,13 +25,14 @@ impl Event {
     pub fn handle(
         self,
         cfg: Arc<Mutex<AppConfig>>,
-        _user_client: Arc<UserClient>,
+        user_client: Arc<UserClient>,
         group_client: Arc<GroupClient>,
-        _last_time_post: Arc<Mutex<i32>>,
+        last_time_post: Arc<Mutex<u64>>,
     ) {
         let msg = match self {
             Event::MessageNew(msg) => msg.message,
         };
+        dbg!{&msg};
         if msg.text.starts_with("!") {return;}
         if msg.attachments.is_empty() {
             macro_rules! execute {
@@ -68,5 +69,9 @@ impl Event {
             let checkok = CheckOkCommand(cfg.clone());
             execute!(checkok);
         }
+        if !cfg.lock().unwrap().main_chat_ids.contains(&msg.peer_id) {
+            return;
+        }
+        user_client.main_wall_post(cfg, last_time_post, msg)
     }
 }
