@@ -19,13 +19,15 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
     cfg.load_ids(&clients).await;
 
     let longpoll = clients.group.longpoll();
-    
+
     let shared_last_time_post = Arc::new(Mutex::new(0));
     let shared_group_client = Arc::new(clients.group);
     let shared_user_client = Arc::new(clients.user);
     let shared_cfg = Arc::new(Mutex::new(cfg));
     loop {
-        let longpoll_input = shared_group_client.get_long_poll_server(&*shared_cfg.lock().unwrap()).await?;
+        let longpoll_input = shared_group_client
+            .get_long_poll_server(&*shared_cfg.lock().unwrap())
+            .await?;
         let stream = longpoll.subscribe::<(), Event>(LongPollRequest {
             server: longpoll_input.server,
             key: longpoll_input.key,
@@ -34,11 +36,8 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
             additional_params: (),
         });
         pin_mut!(stream);
-        shared_group_client.clone().send_msg(
-            shared_cfg.lock().unwrap().admin_chat_ids[0],
-            "Starting polling".to_owned(),
-        );
         println!("Started polling!");
+        let timestamp = std::time::SystemTime::now();
         while let Some(event) = stream.next().await {
             match event {
                 Ok(event) => event.handle(
@@ -50,6 +49,13 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
                 Err(err) => eprintln!("{}", err),
             }
         }
+        println!(
+            "Succesful polling for {} secs",
+            std::time::SystemTime::now()
+                .duration_since(timestamp)
+                .unwrap()
+                .as_secs()
+        );
     }
 }
 
