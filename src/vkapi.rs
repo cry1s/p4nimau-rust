@@ -1,6 +1,6 @@
 use std::{
     env,
-    io::BufReader,
+    io::{BufReader, Cursor},
     sync::{Arc, Mutex},
 };
 
@@ -126,6 +126,7 @@ impl UserClient {
         #[derive(Serialize)]
         struct Request {
             group_id: i32,
+            album_id: i32,
         }
         #[derive(Deserialize, Debug)]
         struct ServerResponse {
@@ -137,7 +138,7 @@ impl UserClient {
         let get_server_task: JoinHandle<ServerResponse> = tokio::spawn(async move {
             user_client
                 .0
-                .send_request("photos.getWallUploadServer", Request { group_id })
+                .send_request("photos.getWallUploadServer", Request { group_id, album_id: 279150453 })
                 .await
                 .unwrap()
         });
@@ -156,8 +157,8 @@ impl UserClient {
 
             let fname = tmp_dir_path.join(fname);
             let mut dest = File::create(&fname).await.unwrap();
-            let content = response.text().await.unwrap();
-            copy(&mut content.as_bytes(), &mut dest).await.unwrap();
+            let mut content = Cursor::new(response.bytes().await.unwrap());
+            copy(&mut content, &mut dest).await.unwrap();
             dbg!(fname)
         });
         let server = dbg!(get_server_task.await.ok())?;
@@ -166,17 +167,20 @@ impl UserClient {
         dbg!(form.add_file("photo", image)).ok()?;
         let uploaded = dbg!(self.1.upload(server.upload_url, form).await).ok()?;
 
-        #[derive(Serialize, Deserialize)]
+        #[derive(Serialize, Deserialize, Debug)]
         struct UploadResponse {
             server: i32,
             photo: String,
             hash: String,
+            group_id: Option<i32>,
         }
+        let mut request = dbg!(serde_json::from_str::<UploadResponse>(&uploaded)).ok()?;
+        request.group_id = Some(group_id);
         let photos: Vec<VkPhoto> = dbg!(
             self.0
                 .send_request(
                     "photos.saveWallPhoto",
-                    serde_json::from_str::<UploadResponse>(&uploaded).ok()?
+                    dbg!(request)
                 )
                 .await
         )
