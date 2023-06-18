@@ -100,6 +100,9 @@ impl UserClient {
             .clone()
             .reupload_attachments(http_client, msg.attachments, group_id)
             .await;
+        if attachments.is_empty() {
+            return;
+        }
         let request = WallPostRequest {
             owner_id: -group_id,
             from_group: 1,
