@@ -1,12 +1,20 @@
 use std::{
     env,
+    io::BufReader,
     sync::{Arc, Mutex},
 };
 
-use crate::config::AppConfig;
+use crate::{config::AppConfig, vkapi::types::VkPhoto};
 use dotenvy_macro::dotenv;
+
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use vkclient::{longpoll::VkLongPoll, List, VkApi, VkApiError};
+use tokio::{fs::File, io::copy, task::JoinHandle};
+use vkclient::{
+    longpoll::VkLongPoll,
+    upload::{Form, VkUploader},
+    List, VkApi, VkApiError,
+};
 
 use self::types::{Forward, SendMessageRequest, SendMessageResponse, VkMessageData};
 
@@ -33,7 +41,7 @@ fn get_user_client() -> VkApi {
 
 pub fn get_clients() -> Clients {
     Clients {
-        user: UserClient(get_user_client()),
+        user: UserClient(get_user_client(), VkUploader::default()),
         group: GroupClient(get_group_client()),
     }
 }
@@ -46,7 +54,7 @@ pub struct LongPollServer {
 }
 
 pub struct GroupClient(pub VkApi);
-pub struct UserClient(pub VkApi);
+pub struct UserClient(pub VkApi, pub VkUploader);
 
 impl UserClient {
     pub async fn get_owner_id(&self) -> Result<i32, VkApiError> {
@@ -58,8 +66,9 @@ impl UserClient {
         Ok(request[0].id)
     }
 
-    pub fn main_wall_post(
+    pub async fn main_wall_post(
         self: Arc<UserClient>,
+        http_client: Client,
         cfg: Arc<Mutex<AppConfig>>,
         last_date: Arc<Mutex<u64>>,
         msg: VkMessageData,
@@ -86,37 +95,130 @@ impl UserClient {
             *last_date.lock().unwrap() += 3600;
             Some(*last_date.lock().unwrap())
         };
-        let owner_id = -cfg.lock().unwrap().group_id.unwrap();
+        let group_id = cfg.lock().unwrap().group_id.unwrap();
+        let attachments = self
+            .clone()
+            .reupload_attachments(http_client, msg.attachments, group_id)
+            .await;
         let request = WallPostRequest {
-            owner_id,
+            owner_id: -group_id,
             from_group: 1,
             message: msg.text,
-            attachments: List(
-                msg.attachments
-                    .into_iter()
-                    .map(|attachment| match attachment {
-                        types::VkMessagesAttachment::Photo { photo } => {
-                            dbg!(&photo);
-                            let largest_size = photo.get_largest_size();
-                            dbg!(&largest_size);
-                            
-                            "".to_string()
-                        }
-                        types::VkMessagesAttachment::Audio { audio } => todo!(),
-                        types::VkMessagesAttachment::Video { video } => todo!(),
-                        types::VkMessagesAttachment::Wall { wall } => todo!(),
-                        _ => "".to_string(),
-                    })
-                    .filter(|x| x != "")
-                    .collect(),
-            ),
+            attachments: List(attachments),
             publish_date,
         };
         tokio::spawn(async move {
             let response: Result<Response, VkApiError> =
                 self.0.send_request("wall.post", request).await;
-            dbg!(&response);
+            match response {
+                Ok(s) => eprintln!("{}", s.post_id),
+                Err(e) => eprintln!("{}", e),
+            }
         });
+    }
+
+    async fn reupload_photo(
+        self: Arc<UserClient>,
+        http_client: Client,
+        url: String,
+        group_id: i32,
+    ) -> Option<String> {
+        #[derive(Serialize)]
+        struct Request {
+            group_id: i32,
+        }
+        #[derive(Deserialize, Debug)]
+        struct ServerResponse {
+            album_id: i32,
+            upload_url: String,
+            user_id: i32,
+        }
+        let user_client = self.clone();
+        let get_server_task: JoinHandle<ServerResponse> = tokio::spawn(async move {
+            user_client
+                .0
+                .send_request("photos.getWallUploadServer", Request { group_id })
+                .await
+                .unwrap()
+        });
+
+        let copy_client = http_client.clone();
+        let tmp_dir = tempdir::TempDir::new("p4nimau").unwrap();
+        let tmp_dir_path = tmp_dir.path().to_owned();
+        let download_image_task = tokio::spawn(async move {
+            let response = copy_client.get(url).send().await.unwrap();
+            let fname = response
+                .url()
+                .path_segments()
+                .and_then(|segments| segments.last())
+                .and_then(|name| if name.is_empty() { None } else { Some(name) })
+                .unwrap_or("tmp.jpg");
+
+            let fname = tmp_dir_path.join(fname);
+            let mut dest = File::create(&fname).await.unwrap();
+            let content = response.text().await.unwrap();
+            copy(&mut content.as_bytes(), &mut dest).await.unwrap();
+            dbg!(fname)
+        });
+        let server = dbg!(get_server_task.await.ok())?;
+        let image = download_image_task.await.ok()?;
+        let mut form = Form::default();
+        dbg!(form.add_file("photo", image)).ok()?;
+        let uploaded = dbg!(self.1.upload(server.upload_url, form).await).ok()?;
+
+        #[derive(Serialize, Deserialize)]
+        struct UploadResponse {
+            server: i32,
+            photo: String,
+            hash: String,
+        }
+        let photos: Vec<VkPhoto> = dbg!(
+            self.0
+                .send_request(
+                    "photos.saveWallPhoto",
+                    serde_json::from_str::<UploadResponse>(&uploaded).ok()?
+                )
+                .await
+        )
+        .ok()?;
+        Some(format!("photo{}_{}", photos[0].owner_id, photos[0].id))
+    }
+
+    async fn reupload_attachments(
+        self: Arc<UserClient>,
+        http_client: Client,
+        attachments: Vec<types::VkMessagesAttachment>,
+        group_id: i32,
+    ) -> Vec<String> {
+        let len = attachments.len();
+        let works = attachments
+            .into_iter()
+            .filter_map(|attachment| match attachment {
+                types::VkMessagesAttachment::Photo { photo } => {
+                    let largest_size = photo.get_largest_size();
+                    match largest_size {
+                        Some(pic) => Some(tokio::spawn(self.clone().reupload_photo(
+                            http_client.clone(),
+                            pic.url.to_string(),
+                            group_id,
+                        ))),
+                        None => None,
+                    }
+                }
+                types::VkMessagesAttachment::Audio { audio: _ } => todo!(),
+                types::VkMessagesAttachment::Video { video: _ } => todo!(),
+                types::VkMessagesAttachment::Wall { wall: _ } => todo!(),
+                types::VkMessagesAttachment::Story { story: _ } => todo!(),
+                _ => None,
+            });
+        let mut res = Vec::with_capacity(len);
+        for jh in works {
+            match dbg!(jh.await) {
+                Ok(Some(s)) => res.push(s),
+                _ => (),
+            }
+        }
+        res
     }
 }
 

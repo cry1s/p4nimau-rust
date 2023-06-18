@@ -1,3 +1,4 @@
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 
@@ -24,6 +25,7 @@ pub enum Event {
 impl Event {
     pub fn handle(
         self,
+        http_client: Client,
         cfg: Arc<Mutex<AppConfig>>,
         user_client: Arc<UserClient>,
         group_client: Arc<GroupClient>,
@@ -72,6 +74,8 @@ impl Event {
         if !cfg.lock().unwrap().main_chat_ids.contains(&msg.peer_id) {
             return;
         }
-        user_client.main_wall_post(cfg, last_time_post, msg)
+        tokio::spawn(
+            user_client.main_wall_post(http_client, cfg, last_time_post, msg)
+        );
     }
 }

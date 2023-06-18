@@ -20,6 +20,7 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
 
     let longpoll = clients.group.longpoll();
 
+    let http_client = reqwest::Client::new();
     let shared_last_time_post = Arc::new(Mutex::new(0));
     let shared_group_client = Arc::new(clients.group);
     let shared_user_client = Arc::new(clients.user);
@@ -41,6 +42,7 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
         while let Some(event) = stream.next().await {
             match event {
                 Ok(event) => event.handle(
+                    http_client.clone(),
                     Arc::clone(&shared_cfg),
                     Arc::clone(&shared_user_client),
                     Arc::clone(&shared_group_client),
