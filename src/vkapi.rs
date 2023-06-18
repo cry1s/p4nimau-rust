@@ -1,6 +1,6 @@
 use std::{
     env,
-    io::{BufReader, Cursor},
+    io::Cursor,
     sync::{Arc, Mutex},
 };
 
@@ -133,9 +133,7 @@ impl UserClient {
         }
         #[derive(Deserialize, Debug)]
         struct ServerResponse {
-            album_id: i32,
             upload_url: String,
-            user_id: i32,
         }
         let user_client = self.clone();
         let get_server_task: JoinHandle<ServerResponse> = tokio::spawn(async move {
@@ -259,7 +257,7 @@ impl GroupClient {
         let request: Vec<GroupID> = self.0.send_request("groups.getById", ()).await?;
         Ok(request[0].id)
     }
-    pub fn send_msg(self: Arc<GroupClient>, peer_id: i32, message: String) {
+    pub fn _send_msg(self: Arc<GroupClient>, peer_id: i32, message: String) {
         tokio::spawn(async move {
             let _request = self
                 .0
