@@ -139,7 +139,13 @@ impl UserClient {
         let get_server_task: JoinHandle<ServerResponse> = tokio::spawn(async move {
             user_client
                 .0
-                .send_request("photos.getWallUploadServer", Request { group_id, album_id: 279150453 })
+                .send_request(
+                    "photos.getWallUploadServer",
+                    Request {
+                        group_id,
+                        album_id: 279150453,
+                    },
+                )
                 .await
                 .unwrap()
         });
@@ -179,10 +185,7 @@ impl UserClient {
         request.group_id = Some(group_id);
         let photos: Vec<VkPhoto> = dbg!(
             self.0
-                .send_request(
-                    "photos.saveWallPhoto",
-                    dbg!(request)
-                )
+                .send_request("photos.saveWallPhoto", dbg!(request))
                 .await
         )
         .ok()?;
@@ -200,15 +203,13 @@ impl UserClient {
             .into_iter()
             .filter_map(|attachment| match attachment {
                 types::VkMessagesAttachment::Photo { photo } => {
-                    let largest_size = photo.get_largest_size();
-                    match largest_size {
-                        Some(pic) => Some(tokio::spawn(self.clone().reupload_photo(
+                    photo.get_largest_size().map(|pic| {
+                        tokio::spawn(self.clone().reupload_photo(
                             http_client.clone(),
                             pic.url.to_string(),
                             group_id,
-                        ))),
-                        None => None,
-                    }
+                        ))
+                    })
                 }
                 types::VkMessagesAttachment::Audio { audio: _ } => todo!(),
                 types::VkMessagesAttachment::Video { video: _ } => todo!(),
@@ -218,9 +219,8 @@ impl UserClient {
             });
         let mut res = Vec::with_capacity(len);
         for jh in works {
-            match dbg!(jh.await) {
-                Ok(Some(s)) => res.push(s),
-                _ => (),
+            if let Ok(Some(s)) = dbg!(jh.await) {
+                res.push(s)
             }
         }
         res
@@ -233,17 +233,18 @@ impl GroupClient {
     }
     pub async fn get_long_poll_server(
         &self,
-        cfg: &AppConfig,
+        cfg: Arc<Mutex<AppConfig>>,
     ) -> Result<LongPollServer, VkApiError> {
         #[derive(Serialize)]
         struct Request {
             group_id: i32,
         }
+        let group_id = cfg.lock().unwrap().group_id;
         self.0
             .send_request(
                 "groups.getLongPollServer",
                 Request {
-                    group_id: cfg.group_id.expect("Group id is not loaded"),
+                    group_id: group_id.expect("Group id is not loaded"),
                 },
             )
             .await

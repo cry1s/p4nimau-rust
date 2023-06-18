@@ -35,7 +35,7 @@ impl Event {
             Event::MessageNew(msg) => msg.message,
         };
         dbg!{&msg};
-        if msg.text.starts_with("!") {return;}
+        if msg.text.starts_with('!') {return;}
         if msg.attachments.is_empty() {
             macro_rules! execute {
                 ($x:expr) => {

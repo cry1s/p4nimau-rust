@@ -27,7 +27,7 @@ pub async fn run() -> Result<(), Box<dyn Error>> {
     let shared_cfg = Arc::new(Mutex::new(cfg));
     loop {
         let longpoll_input = shared_group_client
-            .get_long_poll_server(&*shared_cfg.lock().unwrap())
+            .get_long_poll_server(Arc::clone(&shared_cfg))
             .await?;
         let stream = longpoll.subscribe::<(), Event>(LongPollRequest {
             server: longpoll_input.server,
