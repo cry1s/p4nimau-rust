@@ -216,7 +216,7 @@ impl UserClient {
                 types::VkMessagesAttachment::Wall { wall: _ } => todo!(),
                 types::VkMessagesAttachment::Story { story: _ } => todo!(),
                 _ => None,
-            });
+            }).collect::<Vec<JoinHandle<Option<String>>>>();
         let mut res = Vec::with_capacity(len);
         for jh in works {
             if let Ok(Some(s)) = dbg!(jh.await) {
