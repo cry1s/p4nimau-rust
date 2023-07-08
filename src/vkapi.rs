@@ -153,21 +153,12 @@ impl UserClient {
         let copy_client = http_client.clone();
         let tmp_dir = tempdir::TempDir::new("p4nimau").unwrap();
         let tmp_dir_path = tmp_dir.path().to_owned();
-        let download_image_task = tokio::spawn(async move {
-            let response = copy_client.get(url).send().await.unwrap();
-            let fname = response
-                .url()
-                .path_segments()
-                .and_then(|segments| segments.last())
-                .and_then(|name| if name.is_empty() { None } else { Some(name) })
-                .unwrap_or("tmp.jpg");
-
-            let fname = tmp_dir_path.join(fname);
-            let mut dest = File::create(&fname).await.unwrap();
-            let mut content = Cursor::new(response.bytes().await.unwrap());
-            copy(&mut content, &mut dest).await.unwrap();
-            dbg!(fname)
-        });
+        let download_image_task = tokio::spawn(download(
+            copy_client,
+            url,
+            tmp_dir_path,
+            "tmp.jpg".to_owned(),
+        ));
         let server = dbg!(get_server_task.await.ok())?;
         let image = download_image_task.await.ok()?;
         let mut form = Form::default();
@@ -214,9 +205,13 @@ impl UserClient {
                 types::VkMessagesAttachment::Audio { audio: _ } => todo!(),
                 types::VkMessagesAttachment::Video { video: _ } => todo!(),
                 types::VkMessagesAttachment::Wall { wall: _ } => todo!(),
-                types::VkMessagesAttachment::Story { story: _ } => todo!(),
+                types::VkMessagesAttachment::Story { story } => {
+                    dbg!(story);
+                    None
+                }
                 _ => None,
-            }).collect::<Vec<JoinHandle<Option<String>>>>();
+            })
+            .collect::<Vec<JoinHandle<Option<String>>>>();
         let mut res = Vec::with_capacity(len);
         for jh in works {
             if let Ok(Some(s)) = dbg!(jh.await) {
@@ -225,6 +220,26 @@ impl UserClient {
         }
         res
     }
+}
+
+async fn download(
+    http_client: Client,
+    url: String,
+    tmp_dir_path: std::path::PathBuf,
+    filename: String,
+) -> std::path::PathBuf {
+    let response = http_client.get(url).send().await.unwrap();
+    let fname = response
+        .url()
+        .path_segments()
+        .and_then(|segments| segments.last())
+        .and_then(|name| if name.is_empty() { None } else { Some(name) })
+        .unwrap_or(&filename);
+    let fname = tmp_dir_path.join(fname);
+    let mut dest = File::create(&fname).await.unwrap();
+    let mut content = Cursor::new(response.bytes().await.unwrap());
+    copy(&mut content, &mut dest).await.unwrap();
+    fname
 }
 
 impl GroupClient {
