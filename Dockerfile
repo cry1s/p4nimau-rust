@@ -1,9 +1,10 @@
-ARG APP_NAME=panimau
+ARG APP_NAME=p4nimau-rust
 FROM rust:latest AS build
 ARG APP_NAME
 WORKDIR /app
-
+RUN apt update && apt -yq install ca-certificates
 RUN --mount=type=bind,source=src,target=src \
+    --mount=type=bind,source=.env,target=.env \
     --mount=type=bind,source=Cargo.toml,target=Cargo.toml \
     --mount=type=bind,source=Cargo.lock,target=Cargo.lock \
     --mount=type=cache,target=/app/target/ \
@@ -19,6 +20,6 @@ RUN chmod +x /usr/bin/magicpak
 RUN /usr/bin/magicpak -v /bin/server /bundle
 
 FROM scratch as final
+COPY --from=0 /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=0 /bundle /.
-COPY ./resources ./resources
 ENTRYPOINT ["/bin/server"]
