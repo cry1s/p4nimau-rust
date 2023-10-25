@@ -19,7 +19,7 @@ ADD https://github.com/coord-e/magicpak/releases/download/v1.4.0/magicpak-x86_64
 RUN chmod +x /usr/bin/magicpak
 RUN /usr/bin/magicpak -v /bin/server /bundle
 
-FROM scratch as final
+FROM alpine:latest as final
 COPY --from=0 /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=0 /bundle /.
 ENTRYPOINT ["/bin/server"]
