@@ -69,6 +69,8 @@ impl Command for EditAnecdoteLength {
         match new_len {
             Ok(len) => {
                 cfg.lock().unwrap().anecdote.min_length = len;
+                cfg.lock().unwrap().write();
+                success(msg, cfg, group_client);
             }
             Err(_) => unresolved(msg, cfg, group_client),
         }
