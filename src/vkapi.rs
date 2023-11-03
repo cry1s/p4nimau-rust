@@ -85,11 +85,8 @@ impl UserClient {
         struct Response {
             post_id: i32,
         }
-        let publish_date = if *last_date.lock().unwrap() == 0 {
-            *last_date.lock().unwrap() = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs();
+        let publish_date = if Self::now() - *last_date.lock().unwrap() > 3600 {
+            *last_date.lock().unwrap() = Self::now();
             None
         } else {
             *last_date.lock().unwrap() += 3600;
@@ -118,6 +115,13 @@ impl UserClient {
                 Err(e) => eprintln!("{}", e),
             }
         });
+    }
+
+    fn now() -> u64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
     }
 
     async fn reupload_photo(
