@@ -60,6 +60,7 @@ impl Event {
             execute!(DelSuccess);
             execute!(DelUnresolved);
             execute!(EditAnecdote);
+            execute!(EditAnecdoteLength);
             execute!(EditCheckOk);
             execute!(EditErrorMsg);
             execute!(EditForbidden);
