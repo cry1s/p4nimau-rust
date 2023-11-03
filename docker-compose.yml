@@ -1,6 +1,4 @@
 version: "3"
-volumes:
-  pon-volume:
 services:
   app:
     build:
