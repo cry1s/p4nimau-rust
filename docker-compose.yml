@@ -6,3 +6,5 @@ services:
       dockerfile: Dockerfile
     volumes:
         - ./config.json:/config.json
+    restart:
+      always
